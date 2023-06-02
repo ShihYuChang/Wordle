@@ -1,7 +1,10 @@
 import { useEffect, useReducer } from 'react';
 import styled from 'styled-components';
 
-const answer = 'cake';
+interface Action {
+  type: string;
+  payload: string;
+}
 
 interface Words {
   word: string;
@@ -9,17 +12,56 @@ interface Words {
   hasSubmit: boolean;
 }
 
+interface WordProps {
+  status: 'correct' | 'wrong-place' | 'incorrect';
+}
+
+const Wrapper = styled.div`
+  display: grid;
+  height: 500px;
+  width: 500px;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 100px auto;
+`;
+
+const Word = styled.div<WordProps>`
+  border: 1px solid black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 35px;
+  background-color: ${({ status }) =>
+    status === 'correct'
+      ? 'green'
+      : status === 'wrong-place'
+      ? 'brown'
+      : status === 'incorrect'
+      ? 'gery'
+      : 'white'};
+`;
+
+const answer = 'cake';
+
 function reducer(state: Words[], action: Action) {
-  // console.log(state[0].word);
   const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
-  const targetIndex: number = newWords.findIndex((word) => word.word === '');
+  const targetInputIndex: number = newWords.findIndex(
+    (word) => word.word === ''
+  );
+  const notEmptyBoxes = newWords.filter((word) => word.word !== '');
   switch (action.type) {
     case 'PRESS_ENTER':
       console.log(action.payload);
       return state;
     case 'TYPE':
-      newWords[targetIndex === -1 ? 0 : targetIndex].word = action.payload;
-      state = newWords;
+      if (
+        targetInputIndex !== -1 &&
+        notEmptyBoxes.length < 4 &&
+        /^[a-z]$/.test(action.payload)
+      ) {
+        newWords[targetInputIndex].word = action.payload;
+        state = newWords;
+        return state;
+      }
       return state;
     default:
       return state;
@@ -54,31 +96,12 @@ function App() {
   return (
     <Wrapper>
       {state.map((word: Words, index: number) => (
-        <Word key={index}>{word.word}</Word>
+        <Word key={index} status={word.status}>
+          {word.word}
+        </Word>
       ))}
     </Wrapper>
   );
 }
-
-interface Action {
-  type: string;
-  payload: string;
-}
-
-const Wrapper = styled.div`
-  display: grid;
-  height: 500px;
-  width: 500px;
-  grid-template-columns: repeat(4, 1fr);
-  margin: 100px auto;
-`;
-
-const Word = styled.div`
-  border: 1px solid black;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 35px;
-`;
 
 export default App;
