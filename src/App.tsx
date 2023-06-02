@@ -21,21 +21,24 @@ interface WordProps {
 }
 
 const Wrapper = styled.div`
-  box-sizing: border-box;
-  width: 50%;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  margin: 100px auto;
+  align-items: center;
+  justify-content: center;
 `;
 
 const Board = styled.div`
   display: grid;
-  width: 100%;
-  height: 500px;
+  width: 330px;
+  gap: 5px;
+  margin-top: 200px;
   grid-template-columns: repeat(4, 1fr);
 `;
 
 const Word = styled.div<WordProps>`
+  box-sizing: border-box;
+  height: 75px;
   border: 1px solid black;
   display: flex;
   align-items: center;
@@ -68,13 +71,16 @@ function reducer(state: Words[], action: Action) {
   const notEmptyBoxes: Words[] = newWords.filter(
     (word) => word.character !== ''
   );
-  const lastWord = newWords[targetInputIndex - 1];
+  const lastWord: Words = newWords[targetInputIndex - 1];
+  const notCheckedWords: Words[] = newWords.filter((word) => !word.hasSubmit);
+
   switch (action.type) {
     case 'TYPE':
       if (
         (notEmptyBoxes.length !== newWords.length &&
           targetInputIndex !== -1 &&
-          (notEmptyBoxes.length % 4 !== 0 || notEmptyBoxes.length === 0) &&
+          (notEmptyBoxes.length % answer.length !== 0 ||
+            notEmptyBoxes.length === 0) &&
           /^[a-z]$/.test(action.payload.key)) ||
         lastWord.hasSubmit
       ) {
@@ -83,19 +89,21 @@ function reducer(state: Words[], action: Action) {
       }
       return state;
     case 'PRESS_ENTER':
-      newWords.forEach((word: Words, index: number) => {
-        if (word.character === answer[index]) {
-          word.status = 'correct';
-          word.hasSubmit = true;
-        } else if (word.character !== '' && answer.includes(word.character)) {
-          word.status = 'wrong-place';
-          word.hasSubmit = true;
-        } else if (word.character !== '') {
-          word.status = 'incorrect';
-          word.hasSubmit = true;
-        }
-      });
-      state = newWords;
+      if (notEmptyBoxes.length % answer.length === 0) {
+        notCheckedWords.forEach((word: Words, index: number) => {
+          if (word.character === answer[index]) {
+            word.status = 'correct';
+            word.hasSubmit = true;
+          } else if (word.character !== '' && answer.includes(word.character)) {
+            word.status = 'wrong-place';
+            word.hasSubmit = true;
+          } else if (word.character !== '') {
+            word.status = 'incorrect';
+            word.hasSubmit = true;
+          }
+        });
+        state = newWords;
+      }
       return state;
     case 'PRESS_BACKSPACE':
       if (targetInputIndex > 0 && !lastWord.hasSubmit) {
@@ -156,9 +164,16 @@ function App() {
   }, [isGameOver]);
 
   useEffect(() => {
-    const correctWords = state.filter((word) => word.status === 'correct');
-    const hasSubmitWords = state.filter((word) => word.hasSubmit);
-    if (correctWords.length === 4 || hasSubmitWords.length === state.length) {
+    const hasSubmitWords: Words[] = state.filter((word) => word.hasSubmit);
+    const lastFourSubmitWords: Words[] = hasSubmitWords.slice(-4);
+    const lastFourSubmitCorrectWordsNumber: number = lastFourSubmitWords.filter(
+      (word) => word.status === 'correct'
+    ).length;
+
+    if (
+      lastFourSubmitCorrectWordsNumber === answer.length ||
+      hasSubmitWords.length === state.length
+    ) {
       setIsGameOver(true);
     }
   }, [state]);
@@ -168,7 +183,7 @@ function App() {
       <Board>
         {state.map((word: Words, index: number) => (
           <Word key={index} status={word.status}>
-            {word.character}
+            {word.character.toUpperCase()}
           </Word>
         ))}
       </Board>
