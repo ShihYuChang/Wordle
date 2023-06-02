@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useState } from 'react';
 import styled from 'styled-components';
 
-const answer = 'cake';
+const answer = 'candy';
 
 interface Action {
   type: string;
@@ -39,7 +39,7 @@ const Board = styled.div`
   width: 330px;
   gap: 5px;
   margin-top: 200px;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 `;
 
 const Word = styled.div<WordProps>`
@@ -89,16 +89,16 @@ function reducer(state: Words[], action: Action) {
 
   switch (action.type) {
     case 'TYPE':
-      if (
-        (notEmptyBoxes.length !== newWords.length &&
-          targetInputIndex !== -1 &&
-          (notEmptyBoxes.length % answer.length !== 0 ||
-            notEmptyBoxes.length === 0) &&
-          /^[a-z]$/.test(action.payload.key)) ||
-        lastWord.hasSubmit
-      ) {
-        newWords[targetInputIndex].character = action.payload.key;
-        state = newWords;
+      if (/^[a-z]$/.test(action.payload.key) && targetInputIndex !== -1) {
+        if (
+          (notEmptyBoxes.length !== newWords.length &&
+            (notEmptyBoxes.length % answer.length !== 0 ||
+              notEmptyBoxes.length === 0)) ||
+          lastWord.hasSubmit
+        ) {
+          newWords[targetInputIndex].character = action.payload.key;
+          state = newWords;
+        }
       }
       return state;
     case 'PRESS_ENTER':
@@ -130,7 +130,7 @@ function reducer(state: Words[], action: Action) {
 }
 
 function App() {
-  const words: Words[] = new Array(16).fill({
+  const words: Words[] = new Array(30).fill({
     character: '',
     status: '',
     hasSubmit: false,
