@@ -1,9 +1,13 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import styled from 'styled-components';
 
 interface Action {
   type: string;
-  payload: string;
+  payload: Payload;
+}
+
+interface Payload {
+  key: string;
 }
 
 interface Words {
@@ -51,15 +55,16 @@ function reducer(state: Words[], action: Action) {
     (word) => word.character !== ''
   );
   const lastWord = newWords[targetInputIndex - 1];
-  const hasSubmitBoxes: Words[] = newWords.filter((word) => word.hasSubmit);
   switch (action.type) {
     case 'TYPE':
       if (
-        targetInputIndex !== -1 &&
-        (notEmptyBoxes.length % 4 !== 0 || notEmptyBoxes.length === 0) &&
-        /^[a-z]$/.test(action.payload)
+        (notEmptyBoxes.length !== newWords.length &&
+          targetInputIndex !== -1 &&
+          (notEmptyBoxes.length % 4 !== 0 || notEmptyBoxes.length === 0) &&
+          /^[a-z]$/.test(action.payload.key)) ||
+        lastWord.hasSubmit
       ) {
-        newWords[targetInputIndex].character = action.payload;
+        newWords[targetInputIndex].character = action.payload.key;
         state = newWords;
       }
       return state;
@@ -96,18 +101,37 @@ function App() {
     hasSubmit: false,
   });
   const [state, dispatch] = useReducer(reducer, words);
+  const [isGameOver, setIsGameOver] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
         case 'Enter':
-          dispatch({ type: 'PRESS_ENTER', payload: e.key });
+          !isGameOver &&
+            dispatch({
+              type: 'PRESS_ENTER',
+              payload: {
+                key: e.key,
+              },
+            });
           break;
         case 'Backspace':
-          dispatch({ type: 'PRESS_BACKSPACE', payload: e.key });
+          !isGameOver &&
+            dispatch({
+              type: 'PRESS_BACKSPACE',
+              payload: {
+                key: e.key,
+              },
+            });
           break;
         default:
-          dispatch({ type: 'TYPE', payload: e.key });
+          !isGameOver &&
+            dispatch({
+              type: 'TYPE',
+              payload: {
+                key: e.key,
+              },
+            });
           break;
       }
     }
@@ -115,7 +139,15 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isGameOver]);
+
+  useEffect(() => {
+    const hasSubmitWords = state.filter((word) => word.hasSubmit);
+    if (hasSubmitWords.length === state.length) {
+      setIsGameOver(true);
+      alert('game over!');
+    }
+  }, [state]);
 
   return (
     <Wrapper>
