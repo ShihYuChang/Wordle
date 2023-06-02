@@ -7,7 +7,7 @@ interface Action {
 }
 
 interface Words {
-  word: string;
+  character: string;
   status: 'correct' | 'wrong-place' | 'incorrect';
   hasSubmit: boolean;
 }
@@ -36,7 +36,7 @@ const Word = styled.div<WordProps>`
       : status === 'wrong-place'
       ? 'brown'
       : status === 'incorrect'
-      ? 'gery'
+      ? 'grey'
       : 'white'};
 `;
 
@@ -45,12 +45,22 @@ const answer = 'cake';
 function reducer(state: Words[], action: Action) {
   const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
   const targetInputIndex: number = newWords.findIndex(
-    (word) => word.word === ''
+    (word) => word.character === ''
   );
-  const notEmptyBoxes = newWords.filter((word) => word.word !== '');
+  const notEmptyBoxes = newWords.filter((word) => word.character !== '');
+
   switch (action.type) {
     case 'PRESS_ENTER':
-      console.log(action.payload);
+      newWords.forEach((word: Words, index: number) => {
+        if (word.character === answer[index]) {
+          word.status = 'correct';
+        } else if (word.character !== '' && answer.includes(word.character)) {
+          word.status = 'wrong-place';
+        } else if (word.character !== '') {
+          word.status = 'incorrect';
+        }
+      });
+      state = newWords;
       return state;
     case 'TYPE':
       if (
@@ -58,7 +68,7 @@ function reducer(state: Words[], action: Action) {
         notEmptyBoxes.length < 4 &&
         /^[a-z]$/.test(action.payload)
       ) {
-        newWords[targetInputIndex].word = action.payload;
+        newWords[targetInputIndex].character = action.payload;
         state = newWords;
         return state;
       }
@@ -70,7 +80,7 @@ function reducer(state: Words[], action: Action) {
 
 function App() {
   const words: Words[] = new Array(16).fill({
-    word: '',
+    character: '',
     status: '',
     hasSubmit: false,
   });
@@ -97,7 +107,7 @@ function App() {
     <Wrapper>
       {state.map((word: Words, index: number) => (
         <Word key={index} status={word.status}>
-          {word.word}
+          {word.character}
         </Word>
       ))}
     </Wrapper>
