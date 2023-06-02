@@ -47,30 +47,41 @@ function reducer(state: Words[], action: Action) {
   const targetInputIndex: number = newWords.findIndex(
     (word) => word.character === ''
   );
-  const notEmptyBoxes = newWords.filter((word) => word.character !== '');
-
+  const notEmptyBoxes: Words[] = newWords.filter(
+    (word) => word.character !== ''
+  );
+  const lastWord = newWords[targetInputIndex - 1];
+  const hasSubmitBoxes: Words[] = newWords.filter((word) => word.hasSubmit);
   switch (action.type) {
-    case 'PRESS_ENTER':
-      newWords.forEach((word: Words, index: number) => {
-        if (word.character === answer[index]) {
-          word.status = 'correct';
-        } else if (word.character !== '' && answer.includes(word.character)) {
-          word.status = 'wrong-place';
-        } else if (word.character !== '') {
-          word.status = 'incorrect';
-        }
-      });
-      state = newWords;
-      return state;
     case 'TYPE':
       if (
         targetInputIndex !== -1 &&
-        notEmptyBoxes.length < 4 &&
+        (notEmptyBoxes.length % 4 !== 0 || notEmptyBoxes.length === 0) &&
         /^[a-z]$/.test(action.payload)
       ) {
         newWords[targetInputIndex].character = action.payload;
         state = newWords;
-        return state;
+      }
+      return state;
+    case 'PRESS_ENTER':
+      newWords.forEach((word: Words, index: number) => {
+        if (word.character === answer[index]) {
+          word.status = 'correct';
+          word.hasSubmit = true;
+        } else if (word.character !== '' && answer.includes(word.character)) {
+          word.status = 'wrong-place';
+          word.hasSubmit = true;
+        } else if (word.character !== '') {
+          word.status = 'incorrect';
+          word.hasSubmit = true;
+        }
+      });
+      state = newWords;
+      return state;
+    case 'PRESS_BACKSPACE':
+      if (targetInputIndex > 0 && !lastWord.hasSubmit) {
+        lastWord.character = '';
+        state = newWords;
       }
       return state;
     default:
@@ -91,6 +102,9 @@ function App() {
       switch (e.key) {
         case 'Enter':
           dispatch({ type: 'PRESS_ENTER', payload: e.key });
+          break;
+        case 'Backspace':
+          dispatch({ type: 'PRESS_BACKSPACE', payload: e.key });
           break;
         default:
           dispatch({ type: 'TYPE', payload: e.key });
