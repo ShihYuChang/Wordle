@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useState } from 'react';
 import styled from 'styled-components';
 
+const answer = 'cake';
+
 interface Action {
   type: string;
   payload: Payload;
@@ -18,6 +20,10 @@ interface Words {
 
 interface WordProps {
   status: 'correct' | 'wrong-place' | 'incorrect';
+}
+
+interface GameOverProps {
+  answer: string;
 }
 
 const Wrapper = styled.div`
@@ -54,14 +60,21 @@ const Word = styled.div<WordProps>`
       : 'white'};
 `;
 
-const GameOverPrompt = styled.div`
+const GameOverText = styled.div`
   width: 100%;
   text-align: center;
   margin-top: 40px;
   font-size: 30px;
 `;
 
-const answer = 'cake';
+function GameOverPrompt({ answer }: GameOverProps) {
+  return (
+    <>
+      <GameOverText>Game Over!</GameOverText>
+      <GameOverText>The answer is {answer}</GameOverText>
+    </>
+  );
+}
 
 function reducer(state: Words[], action: Action) {
   const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
@@ -165,7 +178,7 @@ function App() {
 
   useEffect(() => {
     const hasSubmitWords: Words[] = state.filter((word) => word.hasSubmit);
-    const lastFourSubmitWords: Words[] = hasSubmitWords.slice(-4);
+    const lastFourSubmitWords: Words[] = hasSubmitWords.slice(-answer.length);
     const lastFourSubmitCorrectWordsNumber: number = lastFourSubmitWords.filter(
       (word) => word.status === 'correct'
     ).length;
@@ -187,7 +200,7 @@ function App() {
           </Word>
         ))}
       </Board>
-      {isGameOver && <GameOverPrompt>Game Over!</GameOverPrompt>}
+      {isGameOver && <GameOverPrompt answer={answer} />}
     </Wrapper>
   );
 }
