@@ -21,11 +21,18 @@ interface WordProps {
 }
 
 const Wrapper = styled.div`
-  display: grid;
-  height: 500px;
-  width: 500px;
-  grid-template-columns: repeat(4, 1fr);
+  box-sizing: border-box;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
   margin: 100px auto;
+`;
+
+const Board = styled.div`
+  display: grid;
+  width: 100%;
+  height: 500px;
+  grid-template-columns: repeat(4, 1fr);
 `;
 
 const Word = styled.div<WordProps>`
@@ -42,6 +49,13 @@ const Word = styled.div<WordProps>`
       : status === 'incorrect'
       ? 'grey'
       : 'white'};
+`;
+
+const GameOverPrompt = styled.div`
+  width: 100%;
+  text-align: center;
+  margin-top: 40px;
+  font-size: 30px;
 `;
 
 const answer = 'cake';
@@ -101,7 +115,7 @@ function App() {
     hasSubmit: false,
   });
   const [state, dispatch] = useReducer(reducer, words);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -142,20 +156,23 @@ function App() {
   }, [isGameOver]);
 
   useEffect(() => {
+    const correctWords = state.filter((word) => word.status === 'correct');
     const hasSubmitWords = state.filter((word) => word.hasSubmit);
-    if (hasSubmitWords.length === state.length) {
+    if (correctWords.length === 4 || hasSubmitWords.length === state.length) {
       setIsGameOver(true);
-      alert('game over!');
     }
   }, [state]);
 
   return (
     <Wrapper>
-      {state.map((word: Words, index: number) => (
-        <Word key={index} status={word.status}>
-          {word.character}
-        </Word>
-      ))}
+      <Board>
+        {state.map((word: Words, index: number) => (
+          <Word key={index} status={word.status}>
+            {word.character}
+          </Word>
+        ))}
+      </Board>
+      {isGameOver && <GameOverPrompt>Game Over!</GameOverPrompt>}
     </Wrapper>
   );
 }
