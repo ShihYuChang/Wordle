@@ -1,7 +1,8 @@
 import { useEffect, useReducer, useState } from 'react';
 import styled from 'styled-components';
+import { getRandomAnswer } from './utils/firebase';
 
-const answer = 'candy';
+// const answer = 'candy';
 
 interface Action {
   type: string;
@@ -38,95 +39,50 @@ const Board = styled.div`
   display: grid;
   width: 330px;
   gap: 5px;
-  margin-top: 200px;
+  margin-top: 100px;
   grid-template-columns: repeat(5, 1fr);
 `;
 
 const Word = styled.div<WordProps>`
   box-sizing: border-box;
-  height: 75px;
-  border: 1px solid black;
+  height: 62px;
+  border: 2px solid #d3d6da;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 35px;
   background-color: ${({ status }) =>
     status === 'correct'
-      ? 'green'
+      ? '#6aaa64'
       : status === 'wrong-place'
-      ? 'brown'
+      ? '#c9b458'
       : status === 'incorrect'
-      ? 'grey'
+      ? '#787c7e'
       : 'white'};
+  color: ${({ status }) => (status ? 'white' : 'black')};
+  font-weight: 700;
+`;
+
+const GameOverPromptWrapper = styled.div`
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 30px;
+  gap: 10px;
 `;
 
 const GameOverText = styled.div`
-  width: 100%;
-  text-align: center;
-  margin-top: 40px;
-  font-size: 30px;
+  font-size: 20px;
 `;
 
 function GameOverPrompt({ answer }: GameOverProps) {
   return (
-    <>
+    <GameOverPromptWrapper>
       <GameOverText>Game Over!</GameOverText>
       <GameOverText>The answer is {answer}</GameOverText>
-    </>
+    </GameOverPromptWrapper>
   );
-}
-
-function reducer(state: Words[], action: Action) {
-  const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
-  const targetInputIndex: number = newWords.findIndex(
-    (word) => word.character === ''
-  );
-  const notEmptyBoxes: Words[] = newWords.filter(
-    (word) => word.character !== ''
-  );
-  const lastWord: Words = newWords[targetInputIndex - 1];
-  const notCheckedWords: Words[] = newWords.filter((word) => !word.hasSubmit);
-
-  switch (action.type) {
-    case 'TYPE':
-      if (/^[a-z]$/.test(action.payload.key) && targetInputIndex !== -1) {
-        if (
-          (notEmptyBoxes.length !== newWords.length &&
-            (notEmptyBoxes.length % answer.length !== 0 ||
-              notEmptyBoxes.length === 0)) ||
-          lastWord.hasSubmit
-        ) {
-          newWords[targetInputIndex].character = action.payload.key;
-          state = newWords;
-        }
-      }
-      return state;
-    case 'PRESS_ENTER':
-      if (notEmptyBoxes.length % answer.length === 0) {
-        notCheckedWords.forEach((word: Words, index: number) => {
-          if (word.character === answer[index]) {
-            word.status = 'correct';
-            word.hasSubmit = true;
-          } else if (word.character !== '' && answer.includes(word.character)) {
-            word.status = 'wrong-place';
-            word.hasSubmit = true;
-          } else if (word.character !== '') {
-            word.status = 'incorrect';
-            word.hasSubmit = true;
-          }
-        });
-        state = newWords;
-      }
-      return state;
-    case 'PRESS_BACKSPACE':
-      if (targetInputIndex > 0 && !lastWord.hasSubmit) {
-        lastWord.character = '';
-        state = newWords;
-      }
-      return state;
-    default:
-      return state;
-  }
 }
 
 function App() {
@@ -135,10 +91,69 @@ function App() {
     status: '',
     hasSubmit: false,
   });
+  const [answer, setAnswer] = useState<string>('');
   const [state, dispatch] = useReducer(reducer, words);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
 
+  function reducer(state: Words[], action: Action) {
+    const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
+    const targetInputIndex: number = newWords.findIndex(
+      (word) => word.character === ''
+    );
+    const notEmptyBoxes: Words[] = newWords.filter(
+      (word) => word.character !== ''
+    );
+    const lastWord: Words = newWords[targetInputIndex - 1];
+    const notCheckedWords: Words[] = newWords.filter((word) => !word.hasSubmit);
+
+    switch (action.type) {
+      case 'TYPE':
+        if (/^[a-z]$/.test(action.payload.key) && targetInputIndex !== -1) {
+          if (
+            (notEmptyBoxes.length !== newWords.length &&
+              (notEmptyBoxes.length % answer.length !== 0 ||
+                notEmptyBoxes.length === 0)) ||
+            lastWord.hasSubmit
+          ) {
+            newWords[targetInputIndex].character = action.payload.key;
+            state = newWords;
+          }
+        }
+        return state;
+      case 'PRESS_ENTER':
+        if (notEmptyBoxes.length % answer.length === 0) {
+          notCheckedWords.forEach((word: Words, index: number) => {
+            if (word.character === answer[index]) {
+              word.status = 'correct';
+              word.hasSubmit = true;
+            } else if (
+              word.character !== '' &&
+              answer.includes(word.character)
+            ) {
+              word.status = 'wrong-place';
+              word.hasSubmit = true;
+            } else if (word.character !== '') {
+              word.status = 'incorrect';
+              word.hasSubmit = true;
+            }
+          });
+          state = newWords;
+        }
+        return state;
+      case 'PRESS_BACKSPACE':
+        if (targetInputIndex > 0 && !lastWord.hasSubmit) {
+          lastWord.character = '';
+          state = newWords;
+        }
+        return state;
+      default:
+        return state;
+    }
+  }
+
   useEffect(() => {
+    getRandomAnswer(setAnswer);
+
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
         case 'Enter':
@@ -184,12 +199,12 @@ function App() {
     ).length;
 
     if (
-      lastFourSubmitCorrectWordsNumber === answer.length ||
+      (answer !== '' && lastFourSubmitCorrectWordsNumber === answer.length) ||
       hasSubmitWords.length === state.length
     ) {
       setIsGameOver(true);
     }
-  }, [state]);
+  }, [answer, state]);
 
   return (
     <Wrapper>
