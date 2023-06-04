@@ -17,10 +17,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
-export async function getRandomAnswer(setAnswer) {
+export async function getRandomAnswer(setAnswer: (value: string) => void) {
   const answers: Answers[] = [];
   const querySnapshot = await getDocs(collection(db, 'Words'));
-  querySnapshot.forEach((doc) => answers.push(doc.data()));
+  querySnapshot.forEach((doc) => answers.push(doc.data() as Answers));
   const randomIndex: number = Math.floor(Math.random() * answers.length);
   const randomAnswer = answers[randomIndex].word;
   setAnswer(randomAnswer);
