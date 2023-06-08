@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import styled from 'styled-components';
 import { getRandomAnswer } from './utils/firebase';
 
@@ -9,6 +9,7 @@ interface Action {
 
 interface Payload {
   key: string;
+  answer: string;
 }
 
 interface Words {
@@ -83,6 +84,62 @@ function GameOverPrompt({ answer }: GameOverProps) {
   );
 }
 
+function reducer(state: Words[], action: Action) {
+  const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
+  const targetInputIndex: number = newWords.findIndex(
+    (word) => word.character === ''
+  );
+  const notEmptyBoxes: Words[] = newWords.filter(
+    (word) => word.character !== ''
+  );
+  const lastWord: Words = newWords[targetInputIndex - 1];
+  const notCheckedWords: Words[] = newWords.filter((word) => !word.hasSubmit);
+
+  switch (action.type) {
+    case 'TYPE':
+      if (/^[a-z]$/.test(action.payload.key) && targetInputIndex !== -1) {
+        if (
+          (notEmptyBoxes.length !== newWords.length &&
+            (notEmptyBoxes.length % action.payload.answer.length !== 0 ||
+              notEmptyBoxes.length === 0)) ||
+          lastWord.hasSubmit
+        ) {
+          newWords[targetInputIndex].character = action.payload.key;
+          state = newWords;
+        }
+      }
+      return state;
+    case 'PRESS_ENTER':
+      if (notEmptyBoxes.length % action.payload.answer.length === 0) {
+        notCheckedWords.forEach((word: Words, index: number) => {
+          if (word.character === action.payload.answer[index]) {
+            word.status = 'correct';
+            word.hasSubmit = true;
+          } else if (
+            word.character !== '' &&
+            action.payload.answer.includes(word.character)
+          ) {
+            word.status = 'wrong-place';
+            word.hasSubmit = true;
+          } else if (word.character !== '') {
+            word.status = 'incorrect';
+            word.hasSubmit = true;
+          }
+        });
+        state = newWords;
+      }
+      return state;
+    case 'PRESS_BACKSPACE':
+      if (targetInputIndex > 0 && !lastWord.hasSubmit) {
+        lastWord.character = '';
+        state = newWords;
+      }
+      return state;
+    default:
+      return state;
+  }
+}
+
 function App() {
   const words: Words[] = new Array(30).fill({
     character: '',
@@ -91,71 +148,11 @@ function App() {
   });
   const [answer, setAnswer] = useState<string>('');
 
-  const reducer = useCallback(
-    (state: Words[], action: Action) => {
-      const newWords: Words[] = [...JSON.parse(JSON.stringify(state))];
-      const targetInputIndex: number = newWords.findIndex(
-        (word) => word.character === ''
-      );
-      const notEmptyBoxes: Words[] = newWords.filter(
-        (word) => word.character !== ''
-      );
-      const lastWord: Words = newWords[targetInputIndex - 1];
-      const notCheckedWords: Words[] = newWords.filter(
-        (word) => !word.hasSubmit
-      );
-
-      switch (action.type) {
-        case 'TYPE':
-          if (/^[a-z]$/.test(action.payload.key) && targetInputIndex !== -1) {
-            if (
-              (notEmptyBoxes.length !== newWords.length &&
-                (notEmptyBoxes.length % answer.length !== 0 ||
-                  notEmptyBoxes.length === 0)) ||
-              lastWord.hasSubmit
-            ) {
-              newWords[targetInputIndex].character = action.payload.key;
-              state = newWords;
-            }
-          }
-          return state;
-        case 'PRESS_ENTER':
-          if (notEmptyBoxes.length % answer.length === 0) {
-            notCheckedWords.forEach((word: Words, index: number) => {
-              if (word.character === answer[index]) {
-                word.status = 'correct';
-                word.hasSubmit = true;
-              } else if (
-                word.character !== '' &&
-                answer.includes(word.character)
-              ) {
-                word.status = 'wrong-place';
-                word.hasSubmit = true;
-              } else if (word.character !== '') {
-                word.status = 'incorrect';
-                word.hasSubmit = true;
-              }
-            });
-            state = newWords;
-          }
-          return state;
-        case 'PRESS_BACKSPACE':
-          if (targetInputIndex > 0 && !lastWord.hasSubmit) {
-            lastWord.character = '';
-            state = newWords;
-          }
-          return state;
-        default:
-          return state;
-      }
-    },
-    [answer]
-  );
   const [state, dispatch] = useReducer(reducer, words);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
 
   useEffect(() => {
-    !isGameOver && getRandomAnswer(setAnswer);
+    !isGameOver && answer === '' && getRandomAnswer(setAnswer);
 
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
@@ -165,6 +162,7 @@ function App() {
               type: 'PRESS_ENTER',
               payload: {
                 key: e.key,
+                answer: answer,
               },
             });
           break;
@@ -174,6 +172,7 @@ function App() {
               type: 'PRESS_BACKSPACE',
               payload: {
                 key: e.key,
+                answer: answer,
               },
             });
           break;
@@ -183,6 +182,7 @@ function App() {
               type: 'TYPE',
               payload: {
                 key: e.key,
+                answer: answer,
               },
             });
           break;
@@ -192,7 +192,7 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isGameOver]);
+  }, [answer, isGameOver]);
 
   useEffect(() => {
     const hasSubmitWords: Words[] = state.filter((word) => word.hasSubmit);
